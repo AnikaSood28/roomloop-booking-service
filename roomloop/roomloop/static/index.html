@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RoomLoop</title>
+<style>
+:root{--ink:#17252E;--mute:#5B6C73;--paper:#F2F5F4;--line:#D5DEDB;--teal:#0F6B6B;--indigo:#3F4FA3;--danger:#B42318;--ok:#116B3A}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 "Segoe UI Variable","Avenir Next","Helvetica Neue",Arial,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center;justify-content:space-between;padding:16px 28px;background:var(--ink);color:#fff}
+h1{margin:0;font-size:22px}h2{margin:0 0 10px;font-size:16px}
+header .sub{color:#B9C8CC;font-size:13px}
+.nav{display:flex;gap:6px;align-items:center}
+main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;padding:20px 28px;align-items:start}
+section{background:#fff;border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:20px}
+button,input,select{font:inherit;color:inherit}
+button{border:1px solid var(--line);background:#fff;border-radius:4px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--ink)}button.primary{background:var(--teal);border-color:var(--teal);color:#fff}
+button.danger{color:var(--danger);border-color:#E7B4AF}
+header button,header input{background:#24373F;border-color:#3B515A;color:#fff}
+:focus-visible{outline:3px solid #6FB7B7;outline-offset:1px}
+input,select{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:4px;background:#fff}
+label{display:block;font-size:13px;color:var(--mute);margin:10px 0 3px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tabs{display:flex;gap:0;margin-bottom:4px}.tabs button{flex:1;border-radius:0}.tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tl-head,.tl-row{display:grid;grid-template-columns:140px 1fr;align-items:center}
+.tl-row{border-top:1px solid var(--line)}
+.hours{display:grid;grid-template-columns:repeat(13,1fr);font-size:12px;color:var(--mute)}
+.track{position:relative;height:46px;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/13 - 1px),var(--line) calc(100%/13 - 1px),var(--line) calc(100%/13))}
+.bar{position:absolute;top:7px;bottom:7px;border-radius:4px;background:var(--teal);color:#fff;font-size:12px;padding:4px 6px;overflow:hidden;white-space:nowrap}
+.bar.series{background:repeating-linear-gradient(135deg,#3F4FA3 0 8px,#34428C 8px 16px)}
+.room b{display:block}.room span,.legend,.muted{font-size:12px;color:var(--mute)}
+.legend i{display:inline-block;width:22px;height:10px;border-radius:2px;background:var(--teal);vertical-align:middle;margin:0 4px 0 12px}
+.legend i.s{background:repeating-linear-gradient(135deg,#3F4FA3 0 4px,#34428C 4px 8px)}
+table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:8px 6px;border-top:1px solid var(--line);vertical-align:middle}th{font-size:13px;color:var(--mute);font-weight:600;border-top:0}
+td.act{text-align:right;white-space:nowrap}
+.tag{font-size:12px;background:#E3E7F6;color:#2B3979;border-radius:3px;padding:1px 6px}
+.msg{margin-top:12px;padding:10px;border-radius:4px;font-size:14px}.msg.ok{background:#E3F3EA;color:var(--ok)}.msg.err{background:#FBE9E7;color:var(--danger)}
+.msg ul{margin:6px 0 0;padding-left:18px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.chip{font-size:13px;padding:3px 9px;border-radius:12px;border:1px solid var(--line);cursor:pointer}
+.chip.free{border-color:var(--ok);color:var(--ok)}.chip.busy{color:var(--mute);text-decoration:line-through;cursor:default}
+.empty{padding:18px 4px;color:var(--mute)}
+@media(max-width:900px){main{grid-template-columns:1fr;padding:14px}.tl-head,.tl-row{grid-template-columns:90px 1fr}}
+</style></head><body>
+<header>
+  <div><h1>RoomLoop</h1><div class="sub" id="sub">Loading rooms…</div></div>
+  <div class="nav"><button id="prev" aria-label="Previous day">‹</button><input type="date" id="day" aria-label="Day"><button id="next" aria-label="Next day">›</button><button id="today">Today</button></div>
+</header>
+<main>
+ <div>
+  <section><h2>Day view</h2>
+   <div class="legend"><i></i>One-time<i class="s"></i>Weekly series (times are each office's local time)</div>
+   <div class="tl-head" style="margin-top:10px"><div></div><div class="hours" id="hours"></div></div>
+   <div id="timeline"></div>
+  </section>
+  <section><h2>Bookings on this day</h2><div id="list"></div></section>
+  <section><h2>Weekly series still holding rooms</h2>
+   <div class="muted" style="margin-bottom:6px">Ending a series cancels every future booking in it. Past bookings stay.</div><div id="series"></div></section>
+ </div>
+ <aside>
+  <section><h2>Book a room</h2>
+   <div class="tabs"><button id="t1" class="on">One-time</button><button id="t2">Weekly</button></div>
+   <label for="room">Room</label><select id="room"></select>
+   <label for="user">Booked by</label><input id="user" autocomplete="off">
+   <label for="date" id="dl">Date</label><input type="date" id="date">
+   <div class="row2"><div><label for="st">Start</label><input type="time" id="st" value="09:00"></div><div><label for="en">End</label><input type="time" id="en" value="10:00"></div></div>
+   <div id="untilbox" hidden><label for="until">Repeat every week until</label><input type="date" id="until"></div>
+   <div style="display:flex;gap:8px;margin-top:14px"><button class="primary" id="book">Book room</button><button id="check">Find free rooms</button><button id="preview" hidden>Preview</button></div>
+   <div id="chips" class="chips"></div><div id="msg"></div>
+  </section>
+ </aside>
+</main>
+<script>
+const $=s=>document.querySelector(s), H0=7, H1=20;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const shift=(s,n)=>{const d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return fmt(d)};
+const mins=s=>+s.slice(11,13)*60+ +s.slice(14,16);
+let rooms=[], day=fmt(new Date()), weekly=false;
+async function api(m,u,b){const r=await fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+  const j=await r.json(); if(!r.ok) throw Object.assign(new Error(j.error),{data:j}); return j}
+const rn=id=>(rooms.find(r=>r.id===id)||{}).name||id;
+function say(kind,html){$('#msg').innerHTML=`<div class="msg ${kind}" role="status">${html}</div>`}
+
+async function refresh(){
+  $('#day').value=day;
+  const [bs,ss]=await Promise.all([api('GET',`/bookings?from=${day}&to=${day}`),api('GET','/series')]);
+  $('#hours').innerHTML=Array.from({length:13},(_,i)=>`<span>${String(H0+i).padStart(2,'0')}</span>`).join('');
+  $('#timeline').innerHTML=rooms.map(r=>{
+    const bars=bs.filter(b=>b.room_id===r.id).map(b=>{
+      const s=Math.max(mins(b.start),H0*60), e=b.end.slice(0,10)===b.start.slice(0,10)?Math.min(mins(b.end),H1*60):H1*60;
+      const l=(s-H0*60)/((H1-H0)*60)*100, w=Math.max((e-s)/((H1-H0)*60)*100,1);
+      return `<div class="bar ${b.series_id?'series':''}" style="left:${l}%;width:${w}%" title="${esc(b.user)} ${b.start.slice(11,16)}-${b.end.slice(11,16)}">${esc(b.user)}</div>`}).join('');
+    return `<div class="tl-row"><div class="room"><b>${esc(r.name)}</b><span>${esc(r.office)}, ${r.capacity} seats</span></div><div class="track">${bars}</div></div>`}).join('');
+  $('#list').innerHTML=bs.length?`<table><tr><th>Time</th><th>Room</th><th>Booked by</th><th></th></tr>`+bs.map(b=>
+    `<tr><td>${b.start.slice(11,16)}–${b.end.slice(11,16)}</td><td>${esc(rn(b.room_id))}</td><td>${esc(b.user)} ${b.series_id?'<span class="tag">weekly</span>':''}</td>
+     <td class="act"><button class="danger" data-one="${b.id}">${b.series_id?'Cancel this day':'Cancel'}</button>${b.series_id?` <button class="danger" data-ser="${b.series_id}">End series</button>`:''}</td></tr>`).join('')+'</table>'
+    :'<div class="empty">No bookings on this day. Use the form to book a room.</div>';
+  $('#series').innerHTML=ss.length?`<table><tr><th>Room</th><th>When</th><th>Booked by</th><th>Left</th><th></th></tr>`+ss.map(s=>
+    `<tr><td>${esc(s.room_name)}</td><td>Every ${s.weekday}, ${s.time}<div class="muted">until ${s.until}</div></td><td>${esc(s.user)}</td>
+     <td>${s.upcoming} upcoming${s.past?`, ${s.past} past`:''}</td><td class="act"><button class="danger" data-ser="${s.id}">End series</button></td></tr>`).join('')+'</table>'
+    :'<div class="empty">No weekly series are holding rooms.</div>';
+}
+document.addEventListener('click',async e=>{
+  const one=e.target.dataset.one, ser=e.target.dataset.ser;
+  try{
+    if(one){await api('DELETE',`/bookings/${one}?scope=this`);say('ok','Booking cancelled.')}
+    else if(ser){if(!confirm('Cancel all future bookings in this series? Past bookings are kept.'))return;
+      const r=await api('DELETE',`/series/${ser}`);say('ok',`Series ended. ${r.cancelled} future bookings cancelled, ${r.kept_past} past kept.`)}
+    else return; refresh()}catch(x){say('err',esc(x.message))}});
+function times(){const s=`${$('#date').value}T${$('#st').value}:00`,e=`${$('#date').value}T${$('#en').value}:00`;return [s,e]}
+$('#book').onclick=async()=>{
+  const [start,end]=times(), room_id=+$('#room').value, user=$('#user').value;
+  try{
+    if(weekly){const r=await api('POST','/bookings/recurring',{room_id,user,start,end,until:$('#until').value});
+      const sk=r.skipped.length?`<ul>${r.skipped.map(s=>`<li>Skipped ${s.start.slice(0,10)}: ${esc(s.reason)}</li>`).join('')}</ul>`:'';
+      say('ok',`Booked ${r.created.length} weekly sessions in ${esc(rn(room_id))}.${sk}`)}
+    else{await api('POST','/bookings',{room_id,user,start,end});say('ok',`Booked ${esc(rn(room_id))}.`)}
+    day=start.slice(0,10);refresh()
+  }catch(x){const sk=(x.data&&x.data.skipped||[]).map(s=>`<li>${s.start.slice(0,10)}: ${esc(s.reason)}</li>`).join('');say('err',esc(x.message)+(sk?`<ul>${sk}</ul>`:''))}};
+$('#preview').onclick=async()=>{const [start,end]=times();
+  try{const r=await api('POST','/bookings/recurring',{room_id:+$('#room').value,user:$('#user').value||'preview',start,end,until:$('#until').value,dry_run:true});
+    const sk=r.skipped.length?`<ul>${r.skipped.map(s=>`<li>Would skip ${s.start.slice(0,10)}: ${esc(s.reason)}</li>`).join('')}</ul>`:'';
+    say('ok',`Preview: ${r.would_create.length} sessions would be booked. Nothing is saved yet.${sk}`)}
+  catch(x){const sk=(x.data&&x.data.skipped||[]).map(s=>`<li>${s.start.slice(0,10)}: ${esc(s.reason)}</li>`).join('');say('err',esc(x.message)+(sk?`<ul>${sk}</ul>`:''))}};
+$('#check').onclick=async()=>{const [s,e]=times();
+  try{const r=await api('GET',`/availability?start=${s}&end=${e}`);
+    $('#chips').innerHTML=r.map(x=>`<span class="chip ${x.available?'free':'busy'}" data-pick="${x.id}">${esc(x.name)}</span>`).join('')}catch(x){say('err',esc(x.message))}};
+$('#chips').onclick=e=>{if(e.target.classList.contains('free'))$('#room').value=e.target.dataset.pick};
+function mode(w){weekly=w;$('#t1').classList.toggle('on',!w);$('#t2').classList.toggle('on',w);$('#untilbox').hidden=!w;$('#preview').hidden=!w;$('#dl').textContent=w?'First date':'Date'}
+$('#t1').onclick=()=>mode(false);$('#t2').onclick=()=>mode(true);
+$('#day').onchange=e=>{day=e.target.value;refresh()};
+$('#prev').onclick=()=>{day=shift(day,-1);refresh()};$('#next').onclick=()=>{day=shift(day,1);refresh()};$('#today').onclick=()=>{day=fmt(new Date());refresh()};
+(async()=>{
+  rooms=await api('GET','/rooms/details');
+  $('#room').innerHTML=rooms.map(r=>`<option value="${r.id}">${esc(r.name)} (${esc(r.office)}, ${r.capacity} seats)</option>`).join('');
+  $('#sub').textContent=`${rooms.length} rooms in ${[...new Set(rooms.map(r=>r.office))].join(' and ')}`;
+  const up=await api('GET',`/bookings?from=${day}`); if(up.length && !up.some(b=>b.start.startsWith(day))) day=up[0].start.slice(0,10);
+  $('#date').value=day;$('#until').value=shift(day,56);refresh()})();
+</script></body></html>
