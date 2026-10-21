@@ -1,4 +1,5 @@
 # RoomLoop booking service
+<img width="1917" height="863" alt="Screenshot 2026-10-21 165001" src="https://github.com/user-attachments/assets/488189be-c29c-4ff1-8682-d2d913a2bea6" />
 
 Meeting-room booking core with a web dashboard. **Python 3.9+**, no framework. `pip install -r requirements.txt` only installs `tzdata`, which Windows needs for timezones.
 
